@@ -1,0 +1,88 @@
+# ==============================================================================
+# .gitignore — Quant / Portfolio Terminal / FastAPI + Streamlit Project
+# ==============================================================================
+
+# 1. Virtual Environments (Môi trường ảo Python)
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 2. Bytecode & Cache (Bộ nhớ đệm & mã biên dịch Python)
+__pycache__/
+*/__pycache__/
+*/**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# 3. Testing, Profiling & Caches (Kiểm thử tự động & Báo cáo)
+.pytest_cache/
+*/.pytest_cache/
+*/**/.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# 4. Streamlit & App Caches
+.streamlit/
+*.streamlit
+
+# 5. Local Data, Databases & Logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+data/cache/
+data/*.db
+data/*.sqlite*
+
+# Giữ lại các file dữ liệu mẫu cần thiết cho hệ thống chạy offline
+!data/sample_prices.csv
+!data/sample_factors.csv
+
+# 6. Generated Reports & Exports
+reports/*.html
+reports/*.pdf
+reports/*.xlsx
+reports/*.csv
+!reports/.gitkeep
+
+# 7. Machine Learning & Model weights
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+.cache/
+hub/
+models/
+
+# 8. Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# 9. IDE & Editor Specific Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 10. Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 11. Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+

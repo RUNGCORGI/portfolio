@@ -1,0 +1,48 @@
+/* web/css/style.css */
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    /* Tạo hiệu ứng lưới mờ (Grid) cho nền terminal */
+    background-image:
+        linear-gradient(rgba(30, 38, 56, 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 38, 56, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: center;
+}
+
+
+/* Font số (tabular nums) để các cột số không bị nhảy */
+.font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1E2638; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00E5FF; }
+
+
+/* Hiệu ứng nhấp nháy cho live status */
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(0, 230, 118, 0.8); }
+    50% { opacity: 0.5; box-shadow: 0 0 2px rgba(0, 230, 118, 0.2); }
+}
+.animate-pulse {
+    animation: pulse-glow 2s infinite;
+}
+
+
+/* Nút bấm */
+button:active { transform: scale(0.98); }
+button:focus-visible {
+    outline: 2px solid #00E5FF;
+    outline-offset: 2px;
+}
+
+
+/* Hiệu ứng xuất hiện của các tab */
+[x-cloak] { display: none !important; }
+

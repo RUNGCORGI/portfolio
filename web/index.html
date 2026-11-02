@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Terminal · Quant Lab</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { terminal: { bg: '#05070A', panel: '#0D111A', border: '#1E2638', text: '#E2E8F0', muted: '#6B7A90', primary: '#00E5FF', success: '#00E676', danger: '#FF1744', warning: '#FFEA00' } },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    boxShadow: { 'glow': '0 0 10px rgba(0, 229, 255, 0.2)' }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-terminal-bg text-terminal-text font-sans h-screen flex flex-col overflow-hidden" x-data="app()" x-init="init()">
+
+    <!-- HEADER -->
+    <header class="h-14 bg-terminal-panel border-b border-terminal-border flex items-center justify-between px-4 shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i data-lucide="zap" class="text-terminal-primary w-6 h-6 animate-pulse"></i>
+                <h1 class="text-lg font-bold tracking-widest font-mono text-white">PORTFOLIO TERMINAL</h1>
+            </div>
+            <div class="h-6 w-px bg-terminal-border"></div>
+            <div class="flex items-center gap-2 text-xs font-mono text-terminal-muted">
+                <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-terminal-success animate-ping"></div> LIVE</span>
+                <span x-text="currentTime"></span>
+            </div>
+        </div>
+        <div class="flex items-center gap-6 text-xs font-mono">
+            <div class="flex items-center gap-2"><span class="text-terminal-muted">SPY</span><span class="text-white">450.25</span><span class="text-terminal-success">+0.45%</span></div>
+            <div class="flex items-center gap-2"><span class="text-terminal-muted">VIX</span><span class="text-white">14.20</span><span class="text-terminal-danger">-2.10%</span></div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside class="w-80 bg-terminal-panel border-r border-terminal-border flex flex-col shrink-0">
+            <div class="p-4 flex-1 overflow-y-auto space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-terminal-primary mb-2 uppercase tracking-widest">Thị trường</label>
+                    <div class="flex gap-2">
+                        <button @click="setMarket('us')" :class="form.market === 'us' ? 'bg-terminal-primary text-terminal-bg font-bold' : 'bg-terminal-bg text-terminal-muted border border-terminal-border'" class="flex-1 py-1.5 rounded text-xs font-mono transition-colors">MỸ</button>
+                        <button @click="setMarket('vn')" :class="form.market === 'vn' ? 'bg-terminal-primary text-terminal-bg font-bold' : 'bg-terminal-bg text-terminal-muted border border-terminal-border'" class="flex-1 py-1.5 rounded text-xs font-mono transition-colors">VIỆT NAM</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-terminal-muted mb-1 uppercase tracking-widest">Danh mục mã</label>
+                    <input type="text" x-model="form.tickers" class="w-full bg-terminal-bg border border-terminal-border rounded px-3 py-1.5 text-xs focus:outline-none focus:border-terminal-primary text-white font-mono">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-terminal-muted mb-1 uppercase tracking-widest">Từ ngày</label>
+                        <input type="date" x-model="form.start" class="w-full bg-terminal-bg border border-terminal-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-terminal-primary text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-terminal-muted mb-1 uppercase tracking-widest">Phương pháp</label>
+                        <select x-model="form.method" class="w-full bg-terminal-bg border border-terminal-border rounded px-2 py-1.5 text-xs focus:outline-none focus:border-terminal-primary text-white font-mono">
+                            <option>HRP</option><option>Max Sharpe</option><option>Chia đều</option>
+                            <option>Phương sai tối thiểu</option><option>Cân bằng rủi ro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <details class="group border border-terminal-border rounded bg-terminal-bg">
+                    <summary class="flex justify-between items-center p-2 text-[10px] font-bold text-terminal-muted uppercase cursor-pointer hover:text-white">
+                        Tham số Quant Lab <i data-lucide="chevron-down" class="w-3 h-3 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-3 border-t border-terminal-border space-y-3">
+                        <label class="flex items-center gap-2 text-xs text-terminal-muted cursor-pointer">
+                            <input type="checkbox" x-model="form.robust" class="accent-terminal-primary"> Dùng ước lượng co ngót
+                        </label>
+                        <div>
+                            <div class="flex justify-between text-[10px] text-terminal-muted mb-1"><span>Trần trọng số</span><span class="text-terminal-primary" x-text="form.max_weight.toFixed(2)"></span></div>
+                            <input type="range" x-model.number="form.max_weight" min="0.1" max="1.0" step="0.05" class="w-full accent-terminal-primary">
+                        </div>
+                    </div>
+                </details>
+
+                <button @click="fetchActiveTab(true)" class="w-full bg-terminal-primary/10 border border-terminal-primary text-terminal-primary hover:bg-terminal-primary hover:text-terminal-bg font-bold py-2 rounded transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-glow mt-4">
+                    <i data-lucide="cpu" class="w-4 h-4" :class="{'animate-spin': loading}"></i> Chạy phân tích
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            <!-- TABS -->
+            <header class="bg-terminal-panel border-b border-terminal-border px-2 pt-2 flex gap-1 overflow-x-auto no-scrollbar shrink-0">
+                <template x-for="tab in tabs" :key="tab.id">
+                    <button @click="switchTab(tab.id)"
+                            x-show="!tab.marketOnly || form.market === tab.marketOnly"
+                            class="px-4 pb-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+                            :class="activeTab === tab.id ? 'border-terminal-primary text-terminal-primary bg-terminal-primary/5' : 'border-transparent text-terminal-muted hover:text-white hover:bg-white/5'">
+                        <i :data-lucide="tab.icon" class="w-4 h-4"></i><span x-text="tab.name"></span>
+                    </button>
+                </template>
+            </header>
+
+            <!-- LOADING -->
+            <div x-show="loading" class="absolute inset-0 bg-terminal-bg/90 z-50 flex flex-col items-center justify-center backdrop-blur-sm" style="display: none;">
+                <div class="relative w-16 h-16 mb-4"><div class="absolute inset-0 border-4 border-terminal-border rounded-full"></div><div class="absolute inset-0 border-4 border-terminal-primary border-t-transparent rounded-full animate-spin"></div></div>
+                <p class="text-terminal-primary animate-pulse font-mono text-sm tracking-widest">ĐANG XỬ LÝ...</p>
+            </div>
+
+            <!-- CONTENT AREA -->
+            <div class="flex-1 overflow-y-auto p-6 scroll-smooth" x-show="!loading">
+                <!-- LỖI -->
+                <div x-show="error" class="bg-red-900/20 border border-red-500/50 text-red-400 p-4 rounded mb-6 flex items-start gap-3 shadow-glow" style="display: none;">
+                    <i data-lucide="alert-octagon" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                    <div><p class="font-bold text-sm">LỖI HỆ THỐNG</p><p x-text="error" class="text-sm opacity-90"></p></div>
+                </div>
+
+                <!-- TAB 1: OVERVIEW -->
+                <div x-show="activeTab === 'overview'" x-transition.opacity>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" x-show="data.overview">
+                        <template x-for="(val, key) in (data.overview?.metrics || {})" :key="key">
+                            <div x-show="['Tổng lợi nhuận', 'CAGR', 'Sharpe', 'Sụt giảm tối đa'].includes(key)" class="bg-terminal-panel border border-terminal-border rounded-lg p-4 relative overflow-hidden group hover:border-terminal-primary/50 transition-colors">
+                                <p class="text-[10px] text-terminal-muted mb-1 uppercase tracking-wider" x-text="key"></p>
+                                <p class="text-2xl font-bold font-mono" :class="val > 0 ? 'text-terminal-success' : (val < 0 ? 'text-terminal-danger' : 'text-white')" x-text="fmtPct(val, key)"></p>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- CẢNH BÁO MACRO REGIME -->
+                    <div x-show="data.overview?.macro_regime" class="mb-6 p-3 rounded border flex items-center gap-3"
+                         :class="data.overview?.macro_regime === 'RISK ON' ? 'bg-green-900/20 border-terminal-success text-green-400' : 'bg-red-900/20 border-terminal-danger text-red-400'">
+                        <i :data-lucide="data.overview?.macro_regime === 'RISK ON' ? 'trending-up' : 'trending-down'" class="w-5 h-5"></i>
+                        <span class="font-bold font-mono text-sm" x-text="'TRẠNG THÁI VĨ MÔ: ' + (data.overview?.macro_regime === 'RISK ON' ? 'TÍCH CỰC' : 'THẬN TRỌNG')"></span>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="lg:col-span-2 bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h2 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-4">Tăng trưởng của 1 đồng vốn</h2>
+                            <div class="h-80"><canvas id="equityChart"></canvas></div>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <h2 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-4">Phân bổ danh mục</h2>
+                                <div class="h-48 flex justify-center"><canvas id="allocChart"></canvas></div>
+                            </div>
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <h2 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="rss" class="w-3 h-3"></i> Tin tức thị trường</h2>
+                                <div class="space-y-3">
+                                    <div class="border-l-2 border-terminal-success pl-2">
+                                        <p class="text-[11px] text-white leading-tight">Fed signals potential rate cuts in Q3 amid cooling inflation.</p>
+                                        <p class="text-[9px] text-terminal-muted mt-1 font-mono">Reuters · 10m ago</p>
+                                    </div>
+                                    <div class="border-l-2 border-terminal-primary pl-2">
+                                        <p class="text-[11px] text-white leading-tight">Tech sector rallies as AI chip demand surges globally.</p>
+                                        <p class="text-[9px] text-terminal-muted mt-1 font-mono">Bloomberg · 45m ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PRICE CHART & HISTOGRAM -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" x-show="data.overview?.price_data">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h2 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-4">Biểu đồ giá & Đường MA (20/50)</h2>
+                            <div class="h-72"><canvas id="priceChart"></canvas></div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h2 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-4">Phân phối lợi nhuận ngày</h2>
+                            <div class="h-72"><canvas id="returnsHistogram"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: X-RAY -->
+                <div x-show="activeTab === 'xray'" x-transition.opacity style="display: none;">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h2 class="text-xs font-semibold mb-4 text-terminal-muted uppercase tracking-wider">Biểu đồ phân rã rủi ro</h2>
+                            <div class="h-96"><canvas id="riskChart"></canvas></div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg overflow-hidden">
+                            <table class="w-full text-sm text-left font-mono mt-4">
+                                <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase">
+                                    <tr><th class="px-4 py-3">Mã</th><th class="px-4 py-3 text-right">Vốn (%)</th><th class="px-4 py-3 text-right">Rủi ro (%)</th><th class="px-4 py-3 text-right">Chênh lệch</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="row in (data.overview?.risk_contribution || [])" :key="row.ticker">
+                                        <tr class="hover:bg-terminal-primary/5">
+                                            <td class="px-4 py-2 font-medium text-white" x-text="row.ticker"></td>
+                                            <td class="px-4 py-2 text-right" x-text="(row.capital*100).toFixed(2)+'%'"></td>
+                                            <td class="px-4 py-2 text-right" x-text="(row.risk*100).toFixed(2)+'%'"></td>
+                                            <td class="px-4 py-2 text-right font-bold" :class="row.gap > 0 ? 'text-terminal-danger' : 'text-terminal-success'" x-text="(row.gap*100).toFixed(2)+'%'"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: ALLOCATIONS -->
+                <div x-show="activeTab === 'allocations'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">So sánh thuật toán phân bổ</h2>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg overflow-hidden mb-6">
+                        <table class="w-full text-sm text-left font-mono">
+                            <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase">
+                                <tr><th class="px-4 py-3">Phương pháp</th><th class="px-4 py-3 text-right">LN kỳ vọng</th><th class="px-4 py-3 text-right">Biến động</th><th class="px-4 py-3 text-right">Sharpe</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-terminal-border">
+                                <template x-for="row in (data.allocations?.table?.rows || [])" :key="row[0]">
+                                    <tr class="hover:bg-terminal-primary/5">
+                                        <td class="px-4 py-2 font-medium text-white" x-text="row[0]"></td>
+                                        <td class="px-4 py-2 text-right" x-text="(row[1]*100).toFixed(2)+'%'"></td>
+                                        <td class="px-4 py-2 text-right" x-text="(row[2]*100).toFixed(2)+'%'"></td>
+                                        <td class="px-4 py-2 text-right font-bold" :class="row[3] > 1 ? 'text-terminal-success' : 'text-white'" x-text="row[3].toFixed(2)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- BIỂU ĐỒ EFFICIENT FRONTIER -->
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.allocations?.scatter">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-4">Đường biên hiệu quả (Monte Carlo)</h3>
+                        <div class="h-80"><canvas id="efficientFrontierChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: WALKFORWARD -->
+                <div x-show="activeTab === 'walkforward'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Backtest Walk-Forward</h2>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.walkforward?.curves">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Tăng trưởng Out-of-sample</h3>
+                        <div class="h-72"><canvas id="wfChart"></canvas></div>
+                    </div>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg overflow-hidden mb-6">
+                        <table class="w-full text-sm text-left font-mono">
+                            <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase">
+                                <tr><th class="px-4 py-3">Phương pháp</th><th class="px-4 py-3 text-right">CAGR</th><th class="px-4 py-3 text-right">Sharpe (Sau phí)</th><th class="px-4 py-3 text-right">Sharpe (Trước phí)</th><th class="px-4 py-3 text-right">Phí bào mòn</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-terminal-border">
+                                <template x-for="row in (data.walkforward?.table?.rows || [])" :key="row[0]">
+                                    <tr class="hover:bg-terminal-primary/5 transition-colors">
+                                        <td class="px-4 py-2 font-medium text-white" x-text="row[0]"></td>
+                                        <td class="px-4 py-2 text-right" x-text="(row[1]*100).toFixed(2)+'%'"></td>
+                                        <td class="px-4 py-2 text-right font-bold" :class="row[2] > 1 ? 'text-terminal-success' : 'text-white'" x-text="row[2].toFixed(2)"></td>
+                                        <td class="px-4 py-2 text-right text-terminal-muted" x-text="row[3].toFixed(2)"></td>
+                                        <td class="px-4 py-2 text-right text-terminal-danger" x-text="(row[4]*100).toFixed(2)+'%'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 5: VALIDATION -->
+                <div x-show="activeTab === 'validation'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Kiểm định thống kê</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6" x-show="data.validation">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider mb-1">Deflated Sharpe Ratio (DSR)</p>
+                            <p class="text-3xl font-mono font-bold" :class="data.validation?.dsr > 0.95 ? 'text-terminal-success' : 'text-terminal-warning'" x-text="data.validation?.dsr ? data.validation.dsr.toFixed(3) : '...'"></p>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider mb-1">Phân vị so với ngẫu nhiên</p>
+                            <p class="text-3xl font-mono font-bold text-terminal-primary" x-text="data.validation?.percentile?.['Phân vị'] ? data.validation.percentile['Phân vị'].toFixed(1) + '%' : '...'"></p>
+                        </div>
+                    </div>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4" x-show="data.validation?.bootstrap">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Phân phối Bootstrap của Sharpe</h3>
+                        <div class="h-64"><canvas id="valChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- TAB 6: REGIMES -->
+                <div x-show="activeTab === 'regimes'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Chế độ thị trường (Markov ẩn)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" x-show="data.regimes">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4"><p class="text-[10px] text-terminal-muted uppercase tracking-wider">Chế độ hiện tại</p><p class="text-2xl font-bold text-terminal-primary" x-text="data.regimes?.current || '...'"></p></div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4"><p class="text-[10px] text-terminal-muted uppercase tracking-wider">Độ chắc chắn</p><p class="text-2xl font-mono font-bold text-terminal-success" x-text="data.regimes?.confidence ? (data.regimes.confidence*100).toFixed(1) + '%' : '...'"></p></div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4"><p class="text-[10px] text-terminal-muted uppercase tracking-wider">Sharpe (Switching)</p><p class="text-2xl font-mono font-bold text-white" x-text="data.regimes?.strategy?.sharpe_switching ? data.regimes.strategy.sharpe_switching.toFixed(2) : '...'"></p></div>
+                    </div>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.regimes?.probabilities">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Xác suất thuộc từng chế độ</h3>
+                        <div class="h-72"><canvas id="regimeChart"></canvas></div>
+                    </div>
+                    <!-- REGIME EQUITY SWITCHING -->
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4" x-show="data.regimes?.strategy">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Chiến lược chuyển chế độ vs Mua & Giữ</h3>
+                        <div class="h-72"><canvas id="regimeEquityChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- TAB 7: FACTORS -->
+                <div x-show="activeTab === 'factors'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Phân tích Nhân tố (Newey-West)</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" x-show="data.factors">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Hệ số Beta của các nhân tố</h3>
+                            <div class="h-64"><canvas id="factorChart"></canvas></div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Alpha & R²</h3>
+                            <div class="space-y-4 mt-4">
+                                <div><p class="text-[10px] text-terminal-muted uppercase">Alpha năm hoá</p><p class="text-2xl font-mono font-bold" :class="data.factors?.summary?.['Alpha năm hoá'] > 0 ? 'text-terminal-success' : 'text-terminal-danger'" x-text="data.factors?.summary?.['Alpha năm hoá'] ? (data.factors.summary['Alpha năm hoá']*100).toFixed(2)+'%' : '...'"></p></div>
+                                <div><p class="text-[10px] text-terminal-muted uppercase">R² hiệu chỉnh</p><p class="text-2xl font-mono font-bold text-white" x-text="data.factors?.summary?.['R² hiệu chỉnh'] ? (data.factors.summary['R² hiệu chỉnh']*100).toFixed(1)+'%' : '...'"></p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ROLLING BETA HEATMAP & ACTIVE RETURN -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" x-show="data.factors?.rolling">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Bản đồ nhiệt Beta trượt</h3>
+                            <div class="h-64"><canvas id="betaHeatmapChart"></canvas></div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Lợi nhuận vượt trội (vs Benchmark)</h3>
+                            <div class="h-64"><canvas id="activeReturnChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 8: SCENARIOS -->
+                <div x-show="activeTab === 'scenarios'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Kịch bản & Sức chịu đựng</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" x-show="data.scenarios">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Tác động cú sốc nhân tố</h3>
+                            <div class="h-64"><canvas id="scenarioChart"></canvas></div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Chi tiết cú sốc</h3>
+                            <table class="w-full text-sm text-left font-mono mt-2">
+                                <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase">
+                                    <tr><th class="px-4 py-2">Nhân tố</th><th class="px-4 py-2 text-right">Cú sốc</th><th class="px-4 py-2 text-right">Đóng góp</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="row in (data.scenarios?.shock?.detail || [])" :key="row.factor">
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium" x-text="row.factor"></td>
+                                            <td class="px-4 py-2 text-right" x-text="(row.shock*100).toFixed(0)+'%'"></td>
+                                            <td class="px-4 py-2 text-right font-bold" :class="row.impact < 0 ? 'text-terminal-danger' : 'text-terminal-success'" x-text="(row.impact*100).toFixed(2)+'%'"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                                <!-- TAB QUANTAMENTAL AI -->
+                <div x-show="activeTab === 'quantamental'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-1 font-mono flex items-center gap-2">
+                        <i data-lucide="brain" class="w-5 h-5 text-terminal-primary"></i>
+                        Quantamental AI & Dual-RAG Engine
+                    </h2>
+                    <p class="text-xs text-terminal-muted mb-6">Mô hình phân tích đa trụ cột: Kỹ thuật (T) + Cảm xúc Báo chí thời gian thực (S) + Nội tại BCTC (F) loại bỏ bẫy Bull Trap.</p>
+
+                    <!-- A/B TESTING STATS -->
+                    <div class="mb-6" x-show="data.quantamental">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-3">⚡ Hiệu quả Đối chứng A/B Testing (Quantamental AI vs Truyền Thống)</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <p class="text-[10px] text-terminal-muted uppercase">Lợi nhuận (Quant / Trad)</p>
+                                <p class="text-xl font-mono font-bold text-terminal-success" x-text="(data.quantamental?.ab_testing?.m_quant?.total_return?.toFixed(1) || 0) + '% / ' + (data.quantamental?.ab_testing?.m_trad?.total_return?.toFixed(1) || 0) + '%'"></p>
+                            </div>
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <p class="text-[10px] text-terminal-muted uppercase">Tỷ số Sharpe</p>
+                                <p class="text-xl font-mono font-bold text-white" x-text="(data.quantamental?.ab_testing?.m_quant?.sharpe?.toFixed(2) || 0) + ' (Trad: ' + (data.quantamental?.ab_testing?.m_trad?.sharpe?.toFixed(2) || 0) + ')'"></p>
+                            </div>
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <p class="text-[10px] text-terminal-muted uppercase">Biến động (Vol)</p>
+                                <p class="text-xl font-mono font-bold text-white" x-text="(data.quantamental?.ab_testing?.m_quant?.volatility?.toFixed(1) || 0) + '%'"></p>
+                            </div>
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <p class="text-[10px] text-terminal-muted uppercase">Max Drawdown</p>
+                                <p class="text-xl font-mono font-bold text-terminal-danger" x-text="(data.quantamental?.ab_testing?.m_quant?.max_dd?.toFixed(1) || 0) + '%'"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <!-- RADAR CHART: QUANTAMENTAL TRIAD -->
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.quantamental?.radar">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <h3 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider">📡 Bản đồ Radar Năng lực Cổ phiếu (Quantamental Triad)</h3>
+                                <p class="text-[11px] text-terminal-muted font-mono">So sánh Điểm Định lượng Kỹ thuật (T) vs Cảm xúc Báo chí (S) vs Nội tại BCTC (F)</p>
+                            </div>
+                        </div>
+                        <div class="h-96 w-full">
+                            <canvas id="quantRadarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- SIGNALS TABLE -->
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.quantamental">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-3">📋 Bảng Phân Loại Ma Trận Quyết Định [T, S, F]</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left font-mono">
+                                <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted uppercase">
+                                    <tr>
+                                        <th class="px-3 py-2">Mã CP</th>
+                                        <th class="px-3 py-2">Mã [T,S,F]</th>
+                                        <th class="px-3 py-2">Mẫu hình</th>
+                                        <th class="px-3 py-2">Kỹ thuật (T)</th>
+                                        <th class="px-3 py-2">Cảm xúc (S)</th>
+                                        <th class="px-3 py-2">Nội tại (F)</th>
+                                        <th class="px-3 py-2">Khuyến nghị</th>
+                                        <th class="px-3 py-2">Tỷ trọng</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="sig in (data.quantamental?.signals || [])" :key="sig.ticker">
+                                        <tr class="hover:bg-terminal-primary/5">
+                                            <td class="px-3 py-2 font-bold text-white" x-text="sig.ticker"></td>
+                                            <td class="px-3 py-2 font-bold" :style="'color: ' + sig.badge_color" x-text="sig.pattern_code"></td>
+                                            <td class="px-3 py-2" x-text="sig.pattern_name"></td>
+                                            <td class="px-3 py-2" x-text="sig.T === 1 ? '✅ Uptrend' : '❌ Downtrend'"></td>
+                                            <td class="px-3 py-2" x-text="sig.sentiment?.label + ' (' + sig.sentiment?.score?.toFixed(2) + ')'"></td>
+                                            <td class="px-3 py-2" x-text="sig.fundamental?.label + ' (' + sig.fundamental?.score?.toFixed(2) + ')'"></td>
+                                            <td class="px-3 py-2 font-semibold" x-text="sig.recommendation"></td>
+                                            <td class="px-3 py-2 text-terminal-primary font-bold" x-text="sig.weight_action"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    
+                    <!-- A/B TESTING GROWTH OF $1 CHART & ALLOCATION COMPARISON -->
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6" x-show="data.quantamental?.ab_testing?.curves">
+                        <h3 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-1">📈 Tăng Trưởng Tài Sản: Danh mục Quantamental AI vs. Danh mục Truyền Thống (Growth of $1)</h3>
+                        <p class="text-[11px] text-terminal-muted font-mono mb-4">So sánh đường vốn thực nghiệm đối chứng A/B: Tự động loại bỏ mã Bull Trap & dồn vốn cho mã Tín hiệu Vàng</p>
+                        <div class="h-80 w-full mb-6">
+                            <canvas id="quantCurvesChart"></canvas>
+                        </div>
+
+                        <!-- ALLOCATION COMPARISON TABLE -->
+                        <div class="border-t border-terminal-border pt-4">
+                            <h4 class="text-xs font-semibold text-terminal-muted uppercase tracking-wider mb-3">⚖️ So Sánh Tỷ Trọng Phân Bổ Vốn</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left font-mono">
+                                    <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted uppercase">
+                                        <tr>
+                                            <th class="px-3 py-2">Mã CP</th>
+                                            <th class="px-3 py-2 text-right">Tỷ trọng Truyền thống</th>
+                                            <th class="px-3 py-2 text-right">Tỷ trọng Quantamental AI</th>
+                                            <th class="px-3 py-2">Tác động Can thiệp</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-terminal-border">
+                                        <template x-for="row in (data.quantamental?.ab_testing?.allocations || [])" :key="row.ticker">
+                                            <tr class="hover:bg-terminal-primary/5">
+                                                <td class="px-3 py-2 font-bold text-white" x-text="row.ticker"></td>
+                                                <td class="px-3 py-2 text-right text-terminal-muted" x-text="row.trad_weight.toFixed(1) + '%'"></td>
+                                                <td class="px-3 py-2 text-right font-bold text-terminal-primary" x-text="row.quant_weight.toFixed(1) + '%'"></td>
+                                                <td class="px-3 py-2 font-medium" :class="row.action.includes('Blacklist') ? 'text-terminal-danger font-bold' : (row.action.includes('Ưu tiên') ? 'text-terminal-success font-bold' : 'text-terminal-muted')" x-text="row.action"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DRILL DOWN CARDS -->
+                    <div class="space-y-4" x-show="data.quantamental">
+                        <template x-for="sig in (data.quantamental?.signals || [])" :key="sig.ticker + '_detail'">
+                            <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                                <div class="flex items-center justify-between border-b border-terminal-border pb-2 mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-base font-bold text-white font-mono" x-text="sig.ticker"></span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono" :style="'background: ' + sig.badge_color + '22; color: ' + sig.badge_color" x-text="sig.pattern_code + ' ' + sig.pattern_name"></span>
+                                    </div>
+                                    <span class="text-xs font-mono text-terminal-primary" x-text="sig.weight_action"></span>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                                    <div class="bg-terminal-bg p-3 rounded border border-terminal-border">
+                                        <p class="font-bold text-terminal-primary mb-1">📰 RAG Cảm xúc Báo chí (S = <span x-text="sig.S"></span>)</p>
+                                        <p class="text-white" x-text="sig.sentiment?.reasoning"></p>
+                                        <ul class="mt-2 list-disc list-inside text-terminal-muted space-y-1">
+                                            <template x-for="th in (sig.sentiment?.key_themes || [])" :key="th">
+                                                <li x-text="th"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-terminal-bg p-3 rounded border border-terminal-border">
+                                        <p class="font-bold text-terminal-success mb-1">📊 RAG Nội tại BCTC (F = <span x-text="sig.F"></span>)</p>
+                                        <p class="text-white" x-text="sig.fundamental?.reasoning"></p>
+                                        <ul class="mt-2 list-disc list-inside text-terminal-muted space-y-1">
+                                            <template x-for="cp in (sig.fundamental?.criteria_passed || [])" :key="cp">
+                                                <li class="text-terminal-success" x-text="cp"></li>
+                                            </template>
+                                            <template x-for="cf in (sig.fundamental?.criteria_failed || [])" :key="cf">
+                                                <li class="text-terminal-danger" x-text="cf"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+<!-- TAB 9: VN MARKET -->
+                <div x-show="activeTab === 'vnmarket'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Thị trường Việt Nam</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Rổ cổ phiếu VN</h3>
+                            <div class="max-h-96 overflow-y-auto">
+                                <table class="w-full text-sm text-left font-mono">
+                                    <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase sticky top-0">
+                                        <tr><th class="px-4 py-2">Mã</th><th class="px-4 py-2">Sàn</th><th class="px-4 py-2">Ngành</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-terminal-border">
+                                        <template x-for="row in (data.vn?.universe?.rows || [])" :key="row[0]">
+                                            <tr class="hover:bg-terminal-primary/5">
+                                                <td class="px-4 py-2 font-medium text-white" x-text="row[0]"></td>
+                                                <td class="px-4 py-2" x-text="row[1]"></td>
+                                                <td class="px-4 py-2 text-terminal-muted" x-text="row[2]"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Chi phí giao dịch VN</h3>
+                            <table class="w-full text-sm text-left font-mono mt-2">
+                                <thead class="bg-terminal-bg border-b border-terminal-border text-terminal-muted text-xs uppercase">
+                                    <tr><th class="px-4 py-2">Khoản mục</th><th class="px-4 py-2 text-right">Mức</th><th class="px-4 py-2 text-right">Áp dụng</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="row in (data.vn?.costs?.rows || [])" :key="row[0]">
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium text-white" x-text="row[0]"></td>
+                                            <td class="px-4 py-2 text-right text-terminal-primary" x-text="(row[1]*100).toFixed(3)+'%'"></td>
+                                            <td class="px-4 py-2 text-right text-terminal-muted" x-text="row[2]"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 10: JOURNAL -->
+                <div x-show="activeTab === 'journal'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Nhật ký giao dịch</h2>
+                    <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4 mb-6">
+                        <form @submit.prevent="submitTrade" class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                            <input type="date" x-model="tradeForm.date" required class="bg-terminal-bg border border-terminal-border rounded px-2 py-2 text-xs text-white font-mono">
+                            <input type="text" x-model="tradeForm.ticker" placeholder="Mã" required class="bg-terminal-bg border border-terminal-border rounded px-2 py-2 text-xs text-white font-mono uppercase">
+                            <select x-model="tradeForm.side" class="bg-terminal-bg border border-terminal-border rounded px-2 py-2 text-xs text-white font-mono"><option value="MUA">MUA</option><option value="BAN">BÁN</option></select>
+                            <input type="number" x-model="tradeForm.qty" placeholder="KL" required class="bg-terminal-bg border border-terminal-border rounded px-2 py-2 text-xs text-white font-mono">
+                            <input type="number" step="0.01" x-model="tradeForm.price" placeholder="Giá" required class="bg-terminal-bg border border-terminal-border rounded px-2 py-2 text-xs text-white font-mono">
+                            <button type="submit" class="bg-terminal-primary text-terminal-bg font-bold rounded px-2 py-2 text-xs uppercase hover:bg-white">Ghi</button>
+                        </form>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6" x-show="data.journal">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Vị thế</h3>
+                            <table class="w-full text-sm text-left font-mono">
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="row in (data.journal?.positions?.rows || [])" :key="row[0]">
+                                        <tr><td class="px-4 py-2 text-white" x-text="row[0]"></td><td class="px-4 py-2 text-right" x-text="row[1]"></td><td class="px-4 py-2 text-right" x-text="row[2].toFixed(2)"></td><td class="px-4 py-2 text-right font-bold" :class="row[4] >= 0 ? 'text-terminal-success' : 'text-terminal-danger'" x-text="row[4].toFixed(0)"></td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <h3 class="text-xs font-semibold text-terminal-muted uppercase mb-3">Lịch sử</h3>
+                            <table class="w-full text-sm text-left font-mono">
+                                <tbody class="divide-y divide-terminal-border">
+                                    <template x-for="row in (data.journal?.trades?.rows || [])" :key="row[0]">
+                                        <tr><td class="px-4 py-2" x-text="row[1]"></td><td class="px-4 py-2 text-white" x-text="row[2]"></td><td class="px-4 py-2" :class="row[3] === 'MUA' ? 'text-terminal-success' : 'text-terminal-danger'" x-text="row[3]"></td><td class="px-4 py-2 text-right" x-text="row[5]"></td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 11: MONITOR -->
+                <div x-show="activeTab === 'monitor'" x-transition.opacity style="display: none;">
+                    <h2 class="text-lg font-bold mb-4 font-mono">Giám sát & Cảnh báo</h2>
+                    <div x-show="loading" class="text-terminal-primary font-mono text-sm animate-pulse">Đang quét rủi ro...</div>
+                    <template x-if="data.alerts && data.alerts.alerts && data.alerts.alerts.length > 0">
+                        <div class="space-y-3 mb-6">
+                            <template x-for="alert in data.alerts.alerts" :key="alert.code">
+                                <div class="border rounded-lg p-4 flex items-start gap-3 relative overflow-hidden"
+                                     :class="alert.severity === 'Nghiêm trọng' ? 'bg-red-900/20 border-terminal-danger text-red-200' : 'bg-yellow-900/20 border-terminal-warning text-yellow-200'">
+                                    <i :data-lucide="alert.severity === 'Nghiêm trọng' ? 'shield-alert' : 'alert-triangle'" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <h3 class="font-bold text-sm font-mono" x-text="alert.title"></h3>
+                                        <p class="text-sm opacity-90 mt-1" x-text="alert.message"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="data.alerts && (!data.alerts.alerts || data.alerts.alerts.length === 0)">
+                        <div class="text-terminal-muted text-sm bg-terminal-panel p-6 rounded border border-terminal-border text-center font-mono">
+                            <i data-lucide="shield-check" class="w-8 h-8 mx-auto mb-2 text-terminal-success"></i>
+                            Không có cảnh báo. Mọi chỉ số trong ngưỡng an toàn.
+                        </div>
+                    </template>
+                    <template x-if="!data.alerts && !loading">
+                        <div class="text-terminal-danger text-sm bg-red-900/20 p-6 rounded border border-red-500/50 text-center font-mono">
+                            <i data-lucide="alert-octagon" class="w-8 h-8 mx-auto mb-2"></i>
+                            Không thể tải dữ liệu cảnh báo. Vui lòng kiểm tra lại kết nối hoặc thử lại.
+                        </div>
+                    </template>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 mt-6" x-show="data.alerts && data.alerts.context">
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider">Sụt giảm hiện tại</p>
+                            <p class="text-xl font-mono font-bold text-terminal-danger" x-text="data.alerts?.context?.drawdown ? (data.alerts.context.drawdown*100).toFixed(2)+'%' : '...'"></p>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider">Biến động 20 phiên</p>
+                            <p class="text-xl font-mono font-bold text-white" x-text="data.alerts?.context?.vol_20d ? (data.alerts.context.vol_20d*100).toFixed(2)+'%' : '...'"></p>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider">Beta</p>
+                            <p class="text-xl font-mono font-bold text-white" x-text="data.alerts?.context?.beta?.toFixed(2) || '...'"></p>
+                        </div>
+                        <div class="bg-terminal-panel border border-terminal-border rounded-lg p-4">
+                            <p class="text-[10px] text-terminal-muted uppercase tracking-wider">Tương quan TB</p>
+                            <p class="text-xl font-mono font-bold text-white" x-text="data.alerts?.context?.avg_corr?.toFixed(2) || '...'"></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js?v=20261030_v6"></script>
+    <script src="/js/charts.js?v=20261030_v6"></script>
+    <script src="/js/app.js?v=20261030_v6"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+services:
+  terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: portfolio-terminal:nhom4
+    container_name: portfolio-terminal
+    ports:
+      - "8501:8501"
+    volumes:
+      # Cache dữ liệu sống sót qua các lần restart container (P1)
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    restart: unless-stopped
+
+  # Chạy test trong CÙNG môi trường với app:
+  #   docker compose run --rm tests
+  tests:
+    image: portfolio-terminal:nhom4
+    depends_on:
+      - terminal
+    entrypoint: ["python", "-m", "pytest", "-v", "--tb=short"]
+    volumes:
+      - ./data:/app/data
+    profiles: ["ci"]

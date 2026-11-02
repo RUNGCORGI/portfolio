@@ -1,0 +1,15 @@
+# config.yaml
+data:
+  start_date: "2018-01-01"
+  end_date: null
+  cache_dir: "data/cache"
+
+optimizer:
+  max_weight: 0.4
+  risk_free_rate: 0.02
+
+backtest:
+  lookback: 252
+  step: 21
+  embargo: 5
+  fee: 0.001
